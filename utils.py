@@ -1,12 +1,3 @@
-def digits_to_words(num):
-    '''
-    Takes and str of a float number returns it in words
-    Ex: 569 --> beş yüz altmış dokuz
-    '''
-    ones = ["", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz"]
-    tenths = ["", "on", "yirmi", "otuz", "kırk", "elli", "altmış", "yetmiş", "seksen", "doksan"]
-    hundreds = []
-
 def detect_number(line, rigorous=False):
     '''
     Takes an array of words and returns the indices of numbers.
