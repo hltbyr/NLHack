@@ -62,6 +62,96 @@ def num_in_str(s):
     
     return div
 
+def tokenize_for_char_based(text, char_set, min_token=4, min_char=15, unk_eliminate_ratio=0.3):
+    '''
+    Takes a chunck of text, splits them into sentences then splits sentences into tokens.
+    Returns a 2D array examples->tokens
+    char_set = list of valid chars
+    min_token = min token size of a sentence
+    min_char = min character length of a sentence
+    unk_eliminate_ratio = eliminates the sentence if unknown char ratio is bigger this (between 0-1)
+    '''
+    results = []
+    from Corpus.TurkishSplitter import TurkishSplitter
+    sentences = TurkishSplitter().split(text)
+    translator = str.maketrans({chr(10): ' ', chr(9): ' '})
+    for sentence in sentences:
+        sentence = str(sentence)
+        sentence = sentence.translate(translator)
+
+        if(len(sentence) < min_char):
+            continue
+        
+        unks = [1 if (c not in char_set and c != " ") else 0 for c in sentence]
+        unk_ratio = sum(unks) / len(unks)
+        if(unk_ratio > unk_eliminate_ratio):
+            continue
+
+        sentence_split = sentence.split(" ")
+
+        if(len(sentence_split) < min_token):
+            continue
+        
+        results.append(sentence_split)
+    
+    return results
+
+def create_keep_prob_dict(corpus_path, save_path=None, verbose=0):
+    '''
+    Creates keep prob dict {word-->keep_prob} of given corpus
+    corpus_path = path to corpus (.gz pandas file with texts in 'Text' column)
+    save_path = if path is not None, the result will be saved to given path, otherwise the method will return the result
+    '''
+    import string
+    import math
+    from tqdm import tqdm
+    import pandas as pd
+    from collections import Counter
+    from joblib import Parallel, delayed
+
+    data = pd.read_pickle(corpus_path, compression="gzip")
+    
+    total_token=0
+    data = data.dropna()
+
+    if(verbose>0):
+        print("Data has {} rows".format(len(data)))
+        
+    assert data.isnull().values.any() == False, "Data has nan values"
+    
+    def for_joblib(text):
+        tokens = []
+        preprocessed = tokenize_for_char_based(text, char_set=string.printable+"üÜiİöÖğĞşŞçÇ", min_token=0, min_char=0, unk_eliminate_ratio=1.0)
+        for sentence in preprocessed:
+            tokens.extend(sentence)
+        return tokens
+
+    tokens = Parallel(n_jobs = -1, verbose = 1)((delayed(for_joblib)(text) for text in data))
+    tokens.extend(tokens)
+    tokens = [item for sublist in tokens for item in sublist]
+    
+    total_token = len(tokens)
+    counter = Counter(tokens)
+
+    if(verbose > 0):
+        print("Most common 5 is --> {}".format(counter.most_common(5)))
+        print("Least common 5 is --> {}".format(counter.most_common()[-5:]))
+    
+    counter = dict(counter)
+    counter = dict([(key,value/total_token) for key, value in counter.items()])
+    
+    def keep_prob(freq):
+        prob = (math.sqrt(freq/0.001) + 1) * (0.001 / freq)
+        return min(prob,1)
+    
+    counter = dict([(key,keep_prob(value)) for key, value in counter.items()])
+
+    if(save_path != None):
+        import pickle
+        with open('data/' + save_path, 'wb') as handle:
+            pickle.dump(counter, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        return counter
 
 
 def get_syllables_word(word):
@@ -157,7 +247,6 @@ def digits_to_word(number):
 
 #Testing
 if __name__ == "__main__":
-    s = "123serhat33.16gg1.7 ve55,02 125.189 x 569".split(" ")
-
-    print(s)
-    print(detect_number(s, rigorous=True))
+    create_keep_prob_dict('data/merged.gz', save_path="keep_probs.pickle", verbose=1)
+    
+    
