@@ -1,0 +1,4 @@
+vocabulary filter=lfs diff=lfs merge=lfs -text
+word2vec_gensim filter=lfs diff=lfs merge=lfs -text
+word2vec_gensim.wv.vectors.npy filter=lfs diff=lfs merge=lfs -text
+word2vec_org filter=lfs diff=lfs merge=lfs -text
