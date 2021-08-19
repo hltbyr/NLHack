@@ -62,10 +62,9 @@ def num_in_str(s):
     
     return div
 
-def tokenize_for_char_based(text, char_set, min_token=4, min_char=15, unk_eliminate_ratio=0.3):
+def tokenize_for_char_based(text, char_set, min_token=4, min_char=15, unk_eliminate_ratio=0.3, split=True):
     '''
-    Takes a chunck of text, splits them into sentences then splits sentences into tokens.
-    Returns a 2D array examples->tokens
+    Takes a chunck of text, splits them into sentences then splits sentences into tokens if split True.
     char_set = list of valid chars
     min_token = min token size of a sentence
     min_char = min character length of a sentence
@@ -86,13 +85,15 @@ def tokenize_for_char_based(text, char_set, min_token=4, min_char=15, unk_elimin
         unk_ratio = sum(unks) / len(unks)
         if(unk_ratio > unk_eliminate_ratio):
             continue
-
-        sentence_split = sentence.split(" ")
-
-        if(len(sentence_split) < min_token):
+        
+        if(len(sentence.split(" ")) < min_token):
             continue
         
-        results.append(sentence_split)
+        if(split):
+            sentence_split = sentence.split(" ")
+            results.append(sentence_split)
+        else:
+            results.append(sentence)        
     
     return results
 
@@ -149,7 +150,7 @@ def create_keep_prob_dict(corpus_path, save_path=None, verbose=0):
     if(save_path != None):
         import pickle
         with open('data/' + save_path, 'wb') as handle:
-            pickle.dump(counter, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(counter, handle, protocol=4)
     else:
         return counter
 
